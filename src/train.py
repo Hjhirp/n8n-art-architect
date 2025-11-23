@@ -1,5 +1,9 @@
-import unsloth # FIXED: Must be the very first import to patch optimization
 import os
+
+# Force PyTorch allocator into a mode that works with MemPool before anything else touches it.
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:False")
+
+import torch  # IMPORTANT: initialize PyTorch (and its allocator) before Unsloth/vLLM
 import json
 import asyncio
 import statistics
