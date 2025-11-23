@@ -1,6 +1,5 @@
-# We use the standard PyTorch 2.4.0 as a lightweight base.
-# We will let the installation process handle the upgrade to Nightly (2.7) required by ART.
-FROM pytorch/pytorch:2.4.0-cuda12.1-cudnn9-devel
+# Use Torch 2.5.1 with CUDA 12.1 and cuDNN 9, GPU-enabled
+FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-devel
 
 # 1. System Dependencies & Node.js
 ENV DEBIAN_FRONTEND=noninteractive
@@ -20,20 +19,18 @@ ENV PYTHONPATH=/app/src
 # --- CRITICAL FIXES ---
 # 1. Force MKL to use GNU threading to prevent vLLM/PyTorch conflicts
 ENV MKL_THREADING_LAYER=GNU
-# 2. Disable expandable_segments. 
-# This is REQUIRED because ART will force-install PyTorch 2.7 (Nightly),
-# which crashes vLLM without this flag.
-ENV PYTORCH_CUDA_ALLOC_CONF=expandable_segments:False
+# 2. Do NOT set PYTORCH_CUDA_ALLOC_CONF here.
+#    Leaving the default allocator avoids the MemPool + expandable_segments crash.
 
 # 4. Install Dependencies
-# We install Unsloth first. Using [colab-new] pulls the Nightly version,
-# which pre-aligns us with the version ART will eventually demand.
+# Torch 2.5.1 + CUDA 12.1 is ALREADY installed in this base image (GPU-enabled),
+# so we DO NOT re-install torch via pip (to avoid CPU-only wheels).
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
+    pip install --no-cache-dir \
+        "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
 
 # 5. Install Project Dependencies via UV
-# We define dependencies directly here to ensure Linux/GPU compatibility
-# This will install vLLM 0.9.2 and confirm PyTorch 2.7 is present.
+# We don't touch torch here; we just install ART + friends.
 RUN uv pip install --system \
     "openpipe-art[backend]==0.4.11" \
     "mcp>=1.11.0" \
